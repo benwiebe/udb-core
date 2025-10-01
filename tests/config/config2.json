@@ -1,0 +1,16 @@
+{
+  "plugins": [
+    {
+      "id": "plugin-1",
+      "config": {
+        "example": "test"
+      }
+    },
+    {
+      "id": "plugin-2",
+      "config": {
+        "differentExample": "another value"
+      }
+    }
+  ]
+}

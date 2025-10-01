@@ -1,6 +1,6 @@
 package display
 
-import "github.com/mcuadros/go-rpi-rgb-led-matrix"
+import "github.com/tfk1410/go-rpi-rgb-led-matrix"
 
 type Hub75Display struct {
 	config rgbmatrix.HardwareConfig

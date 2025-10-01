@@ -1,0 +1,10 @@
+{
+  "plugins": [
+    {
+      "id": "plugin-1",
+      "config": {
+        "example": "test"
+      }
+    }
+  ]
+}
