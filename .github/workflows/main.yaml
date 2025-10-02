@@ -14,6 +14,8 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    env:
+      GOFLAGS: '-mod=mod'
     steps:
       - uses: actions/checkout@v4
 
