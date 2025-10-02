@@ -5,6 +5,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/BurntSushi/xgb v0.0.0-20210121224620-deaf085860bc/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/benwiebe/udb-plugin-library v0.0.1 h1:M+XfZpwcptglfAc/tBKpUM/aJGgjcwdHotzRdl9EzhI=
 github.com/benwiebe/udb-plugin-library v0.0.1/go.mod h1:eFhQ17MqcSd7KSRqHUq3cyay234HRPeZyrBbrvoBPco=
+github.com/benwiebe/udb-plugin-library v0.0.2 h1:2pBPL3D4U6/F4NtEQl/fr8i2Wkg/NnbrjJpEkrFI6aM=
+github.com/benwiebe/udb-plugin-library v0.0.2/go.mod h1:eFhQ17MqcSd7KSRqHUq3cyay234HRPeZyrBbrvoBPco=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/disintegration/imaging v1.6.2/go.mod h1:44/5580QXChDfwIclfc/PCwrr44amcmDAg8hxG0Ewe4=
 github.com/fogleman/gg v1.3.0/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=

@@ -4,7 +4,7 @@ go 1.25.1
 
 require github.com/tfk1410/go-rpi-rgb-led-matrix v0.0.0-20210404121211-ed43f29cbccb
 
-require github.com/benwiebe/udb-plugin-library v0.0.1
+require github.com/benwiebe/udb-plugin-library v0.0.2
 
 require (
 	dmitri.shuralyov.com/gpu/mtl v0.0.0-20221208032759-85de2813cf6b // indirect
