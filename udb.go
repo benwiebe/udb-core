@@ -26,10 +26,23 @@ func main() {
 	fmt.Println("Plugins loaded")
 
 	/**** Determine Boards and Data Sources Required by Config ****/
-	boards := make([]types.Board[any], 0, len(appConfig.Boards))
+	type boardEntry struct {
+		board  types.Board[any]
+		config config.BoardConfig
+	}
+	boards := make([]boardEntry, 0, len(appConfig.Boards))
 	for _, boardConfig := range appConfig.Boards {
 		plugin := pluginData.ById[boardConfig.Plugin]
+		if plugin == nil {
+			fmt.Printf("Error: plugin %s not found or failed to load\n", boardConfig.Plugin)
+			continue
+		}
 		pluginType := (*plugin).GetPluginType()
+		if pluginType == types.PluginTypeDatasource {
+			fmt.Printf("Error: plugin %s is a datasource-only plugin and cannot provide boards\n",
+				(*plugin).GetName())
+			continue
+		}
 		if pluginType == types.PluginTypeBoards || pluginType == types.PluginTypeCombined {
 			typedPlugin, ok := (*plugin).(udb_plugin_library.UdbBoardPlugin)
 			if !ok {
@@ -42,7 +55,7 @@ func main() {
 				fmt.Printf("Error: plugin %s does not contain board %s\n", (*plugin).GetName(), boardConfig.ID)
 				continue
 			}
-			boards = append(boards, board)
+			boards = append(boards, boardEntry{board: board, config: boardConfig})
 		}
 	}
 

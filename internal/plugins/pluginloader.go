@@ -39,8 +39,14 @@ func LoadPlugins(pluginsConfig config.PluginsConfig) PluginData {
 			continue
 		}
 
-		typedPluginVar, ok := plgVar.(udb_plugin_library.UdbPlugin)
-		if !ok {
+		// Plugins may export their Plugin symbol either as a concrete type that implements
+		// UdbPlugin, or as a *UdbPlugin interface value. Handle both conventions.
+		var typedPluginVar udb_plugin_library.UdbPlugin
+		if pluginPtr, ok := plgVar.(*udb_plugin_library.UdbPlugin); ok {
+			typedPluginVar = *pluginPtr
+		} else if direct, ok := plgVar.(udb_plugin_library.UdbPlugin); ok {
+			typedPluginVar = direct
+		} else {
 			fmt.Printf("Error: plugin %s does not implement UdbPlugin interface\n", pluginConfig.ID)
 			continue
 		}
