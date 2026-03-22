@@ -7,6 +7,9 @@
 package display
 
 import (
+	"image"
+	"image/draw"
+
 	"github.com/benwiebe/udb-core/internal/config"
 	rgbmatrix "github.com/tfk1410/go-rpi-rgb-led-matrix"
 )
@@ -32,8 +35,11 @@ func InitializeDisplay(displayConfig config.DisplayConfig) Hub75Display {
 	}
 }
 
-func (disp Hub75Display) NewCanvas() *rgbmatrix.Canvas {
-	return rgbmatrix.NewCanvas(disp.matrix)
+func (disp Hub75Display) Render(img image.Image) error {
+	canvas := rgbmatrix.NewCanvas(disp.matrix)
+	defer canvas.Close()
+	draw.Draw(canvas, canvas.Bounds(), img, image.Point{}, draw.Src)
+	return canvas.Render()
 }
 
 func (disp Hub75Display) CloseDisplay() {

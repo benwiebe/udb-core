@@ -8,6 +8,7 @@ package display
 
 import (
 	"fmt"
+	"image"
 
 	"github.com/benwiebe/udb-core/internal/config"
 )
@@ -17,6 +18,11 @@ type Hub75Display struct{}
 func InitializeDisplay(displayConfig config.DisplayConfig) Hub75Display {
 	fmt.Printf("Stub display initialized (%dx%d)\n", displayConfig.Width, displayConfig.Height)
 	return Hub75Display{}
+}
+
+func (disp Hub75Display) Render(img image.Image) error {
+	fmt.Printf("Stub display render: %dx%d image\n", img.Bounds().Dx(), img.Bounds().Dy())
+	return nil
 }
 
 func (disp Hub75Display) CloseDisplay() {

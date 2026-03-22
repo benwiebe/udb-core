@@ -66,7 +66,7 @@ func main() {
 	// TODO: this
 
 	/**** Initialize Display ****/
-	displayInstance := display.InitializeDisplay(appConfig.Display)
+	var displayInstance display.Display = display.InitializeDisplay(appConfig.Display)
 
 	/**** Main Boards Display Loop ****/
 	// TODO: this
