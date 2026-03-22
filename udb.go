@@ -50,9 +50,9 @@ func main() {
 					(*plugin).GetName())
 				continue
 			}
-			board := typedPlugin.GetBoardMap()[boardConfig.ID]
+			board := typedPlugin.GetBoardMap()[boardConfig.BoardId]
 			if board == nil {
-				fmt.Printf("Error: plugin %s does not contain board %s\n", (*plugin).GetName(), boardConfig.ID)
+				fmt.Printf("Error: plugin %s does not contain board %s\n", (*plugin).GetName(), boardConfig.BoardId)
 				continue
 			}
 			boards = append(boards, boardEntry{board: board, config: boardConfig})
