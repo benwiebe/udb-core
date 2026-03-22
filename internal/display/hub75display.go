@@ -1,7 +1,14 @@
+//go:build linux
+
+// This file contains the real Hub75 LED matrix display implementation using the
+// go-rpi-rgb-led-matrix library. It is only compiled on Linux (i.e. Raspberry Pi).
+// For local development on other platforms, see hub75display_stub.go.
+
 package display
 
 import (
-	"github.com/tfk1410/go-rpi-rgb-led-matrix"
+	"github.com/benwiebe/udb-core/internal/config"
+	rgbmatrix "github.com/tfk1410/go-rpi-rgb-led-matrix"
 )
 
 type Hub75Display struct {
@@ -10,21 +17,19 @@ type Hub75Display struct {
 	toolkit *rgbmatrix.ToolKit
 }
 
-func InitializeDisplayWithConfig(config rgbmatrix.HardwareConfig) Hub75Display {
-	m, _ := rgbmatrix.NewRGBLedMatrix(&config)
-	dispObj := Hub75Display{
-		config:  config,
+func InitializeDisplay(displayConfig config.DisplayConfig) Hub75Display {
+	hwConfig := rgbmatrix.DefaultConfig
+	hwConfig.Cols = displayConfig.Width
+	hwConfig.Rows = displayConfig.Height
+	if displayConfig.Brightness > 0 {
+		hwConfig.Brightness = displayConfig.Brightness
+	}
+	m, _ := rgbmatrix.NewRGBLedMatrix(&hwConfig)
+	return Hub75Display{
+		config:  hwConfig,
 		matrix:  m,
 		toolkit: rgbmatrix.NewToolKit(m),
 	}
-	return dispObj
-}
-
-func InitializeDisplayBySize(height int, width int) Hub75Display {
-	config := rgbmatrix.DefaultConfig
-	config.Cols = width
-	config.Rows = height
-	return InitializeDisplayWithConfig(config)
 }
 
 func (disp Hub75Display) NewCanvas() *rgbmatrix.Canvas {

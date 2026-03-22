@@ -6,6 +6,8 @@ import (
 	"github.com/benwiebe/udb-core/internal/config"
 	"github.com/benwiebe/udb-core/internal/display"
 	"github.com/benwiebe/udb-core/internal/plugins"
+	udb_plugin_library "github.com/benwiebe/udb-plugin-library"
+	"github.com/benwiebe/udb-plugin-library/types"
 )
 
 func main() {
@@ -20,20 +22,38 @@ func main() {
 	fmt.Println("Config loaded")
 
 	/**** Load Plugins ****/
-	_ = plugins.LoadPlugins(appConfig.Plugins)
+	pluginData := plugins.LoadPlugins(appConfig.Plugins)
 	fmt.Println("Plugins loaded")
 
 	/**** Determine Boards and Data Sources Required by Config ****/
-	// TODO: this
+	boards := make([]types.Board[any], 0, len(appConfig.Boards))
+	for _, boardConfig := range appConfig.Boards {
+		plugin := pluginData.ById[boardConfig.Plugin]
+		pluginType := (*plugin).GetPluginType()
+		if pluginType == types.PluginTypeBoards || pluginType == types.PluginTypeCombined {
+			typedPlugin, ok := (*plugin).(udb_plugin_library.UdbBoardPlugin)
+			if !ok {
+				fmt.Printf("Error: plugin %s does not implement UdbBoardPlugin interface\n",
+					(*plugin).GetName())
+				continue
+			}
+			board := typedPlugin.GetBoardMap()[boardConfig.ID]
+			if board == nil {
+				fmt.Printf("Error: plugin %s does not contain board %s\n", (*plugin).GetName(), boardConfig.ID)
+				continue
+			}
+			boards = append(boards, board)
+		}
+	}
 
 	/**** Setup Data Sources ****/
-	// TODO: this
+	// TODO: set up datasources
 
 	/**** Setup Boards ****/
 	// TODO: this
 
 	/**** Initialize Display ****/
-	displayInstance := display.InitializeDisplayWithConfig(appConfig.Display.ConvertToHardwareConfig())
+	displayInstance := display.InitializeDisplay(appConfig.Display)
 
 	/**** Main Boards Display Loop ****/
 	// TODO: this

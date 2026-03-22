@@ -9,16 +9,22 @@ import (
 )
 
 type PluginList = []*udb_plugin_library.UdbPlugin
+type PluginMap = map[string]*udb_plugin_library.UdbPlugin
+type PluginData struct {
+	List PluginList
+	ById PluginMap
+}
 
-func GetPluginPath(pluginConfig config.PluginsConfig) string {
+func GetPluginPath(pluginConfig config.PluginConfig) string {
 	if pluginConfig.Path != "" {
 		return pluginConfig.Path
 	}
 	return "./plugins/" + pluginConfig.ID + "/" + pluginConfig.ID + ".so"
 }
 
-func LoadPlugins(pluginsConfig []config.PluginsConfig) PluginList {
+func LoadPlugins(pluginsConfig config.PluginsConfig) PluginData {
 	pluginList := make(PluginList, 0, len(pluginsConfig))
+	pluginMap := make(PluginMap, len(pluginsConfig))
 	for _, pluginConfig := range pluginsConfig {
 		// We use plugin.Open to load the plugin by path
 		plg, err := plugin.Open(GetPluginPath(pluginConfig))
@@ -44,6 +50,10 @@ func LoadPlugins(pluginsConfig []config.PluginsConfig) PluginList {
 			continue
 		}
 		pluginList = append(pluginList, &typedPluginVar)
+		pluginMap[pluginConfig.ID] = &typedPluginVar
 	}
-	return pluginList
+	return PluginData{
+		List: pluginList,
+		ById: pluginMap,
+	}
 }
