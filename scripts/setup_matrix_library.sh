@@ -8,7 +8,7 @@ mkdir vendor
 cd vendor
 git clone https://github.com/hzeller/rpi-rgb-led-matrix.git
 cd rpi-rgb-led-matrix
-sed -i '' 's/.*RGB_SLOWDOWN_GPIO.*/DEFINE+=-DRGB_SLOWDOWN_GPIO=2/' lib/Makefile
+sed -i.bak 's/.*RGB_SLOWDOWN_GPIO.*/DEFINE+=-DRGB_SLOWDOWN_GPIO=2/' lib/Makefile && rm -f lib/Makefile.bak
 make -j
 
 cd $repodir
