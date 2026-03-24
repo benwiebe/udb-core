@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "scripts/**"
+      - ".github/workflows/**"
+  pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GOFLAGS: '-mod=mod'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+          cache: true
+
+      - name: Set GOPATH
+        run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+
+      - name: Cache matrix library
+        uses: actions/cache@v4
+        id: matrix-cache
+        with:
+          path: ${{ env.GOPATH }}/pkg/mod/github.com/tfk1410/go-rpi-rgb-led-matrix@v0.0.0-20210404121211-ed43f29cbccb/vendor
+          key: matrix-lib-${{ hashFiles('scripts/setup_matrix_library.sh') }}
+
+      - name: Set up LED Matrix Library
+        if: steps.matrix-cache.outputs.cache-hit != 'true'
+        run: ./scripts/setup_matrix_library.sh
+
+      - name: Go Tidy
+        run: go mod tidy && git diff --exit-code
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./...
