@@ -6,5 +6,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="udb-plugin-library" />
+    <orderEntry type="module" module-name="udb-plugin-samples" />
   </component>
 </module>

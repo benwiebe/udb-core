@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/udb-core.iml" filepath="$PROJECT_DIR$/.idea/udb-core.iml" />
       <module fileurl="file://$PROJECT_DIR$/../udb-plugin-library/.idea/udb-plugin-library.iml" filepath="$PROJECT_DIR$/../udb-plugin-library/.idea/udb-plugin-library.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../udb-plugin-samples/.idea/udb-plugin-samples.iml" filepath="$PROJECT_DIR$/../udb-plugin-samples/.idea/udb-plugin-samples.iml" />
     </modules>
   </component>
 </project>
