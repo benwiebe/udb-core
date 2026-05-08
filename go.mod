@@ -6,7 +6,7 @@ require github.com/tfk1410/go-rpi-rgb-led-matrix v0.0.0-20210404121211-ed43f29cb
 
 require (
 	github.com/benwiebe/udb-plugin-library v0.2.0
-	golang.org/x/image v0.30.0
+	golang.org/x/image v0.38.0
 )
 
 require (
