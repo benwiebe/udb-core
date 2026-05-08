@@ -107,13 +107,13 @@ type Board[T any] interface {
     GetSupportedDimensions() []BoardDimensions
     GetType() BoardType
     GetDatasourceType() string
-    Init(config json.RawMessage, datasource Datasource[T]) error
+    Init(config json.RawMessage, datasource Datasource[T], dimensions BoardDimensions) error
 }
 ```
 
 - **`GetSupportedDimensions()`** — return an empty slice to indicate the board handles any size. Otherwise list the panel dimensions you natively support (e.g. `{Width: 64, Height: 32}`). UDB uses this for future auto-scaling.
 - **`GetDatasourceType()`** — return a type string matching your datasource's `GetType()`, or `""` if the board needs no datasource. See [Type String Convention](#type-string-convention).
-- **`Init()`** — parse your board config from `config` (JSON) and store the datasource for use in `Render()`. Return a non-nil error to decline initialization (the board will be skipped with a warning).
+- **`Init()`** — parse your board config from `config` (JSON), store the datasource for use in `Render()`, and use `dimensions` to pre-compute any layout values (font sizes, image buffers, drawing coordinates) that depend on the display size. The display dimensions never change after `Init()` returns. Return a non-nil error to decline initialization (the board will be skipped with a warning).
 
 ### Board Types
 
@@ -123,15 +123,20 @@ Renders once and holds the image for the configured duration.
 
 ```go
 type MyStaticBoard struct {
-    colour color.Color
+    cachedImage image.Image
 }
 
 func (b *MyStaticBoard) GetType() types.BoardType { return types.BoardTypeStatic }
 
-func (b *MyStaticBoard) Render(dims types.BoardDimensions) image.Image {
+func (b *MyStaticBoard) Init(cfg json.RawMessage, _ types.Datasource[any], dims types.BoardDimensions) error {
     img := image.NewRGBA(image.Rect(0, 0, dims.Width, dims.Height))
-    // draw to img...
-    return img
+    // draw to img using config values...
+    b.cachedImage = img
+    return nil
+}
+
+func (b *MyStaticBoard) Render() image.Image {
+    return b.cachedImage
 }
 ```
 
@@ -142,11 +147,16 @@ Returns a full pre-baked sequence of frames. UDB cycles through them, repeating 
 ```go
 func (b *MyAnimatedBoard) GetType() types.BoardType { return types.BoardTypeAnimated }
 
-func (b *MyAnimatedBoard) Render(dims types.BoardDimensions) types.Animation {
+func (b *MyAnimatedBoard) Init(cfg json.RawMessage, _ types.Datasource[any], dims types.BoardDimensions) error {
+    // pre-build all frames using dims
+    return nil
+}
+
+func (b *MyAnimatedBoard) Render() types.Animation {
     // types.Animation is []AnimationFrame
     return []types.AnimationFrame{
-        {Img: frame1, Duration: 100 * time.Millisecond},
-        {Img: frame2, Duration: 100 * time.Millisecond},
+        {Img: b.frame1, Duration: 100 * time.Millisecond},
+        {Img: b.frame2, Duration: 100 * time.Millisecond},
     }
 }
 ```
@@ -158,10 +168,18 @@ Called repeatedly on the render loop. Each call returns one frame; the frame's `
 ```go
 func (b *MyDynamicBoard) GetType() types.BoardType { return types.BoardTypeDynamic }
 
-func (b *MyDynamicBoard) Render(dims types.BoardDimensions) types.AnimationFrame {
+func (b *MyDynamicBoard) Init(cfg json.RawMessage, ds types.Datasource[any], dims types.BoardDimensions) error {
+    b.datasource = ds
+    b.width = dims.Width
+    b.height = dims.Height
+    // pre-compute layout (e.g. font size, drawing coordinates) using dims
+    return nil
+}
+
+func (b *MyDynamicBoard) Render() types.AnimationFrame {
     data := b.datasource.GetData()
-    img := image.NewRGBA(image.Rect(0, 0, dims.Width, dims.Height))
-    // draw current state using data...
+    img := image.NewRGBA(image.Rect(0, 0, b.width, b.height))
+    // draw current state using data and pre-computed layout...
     return types.AnimationFrame{
         Img:      img,
         Duration: time.Second, // call Render() again after 1 second
@@ -184,8 +202,9 @@ import (
 )
 
 type SingleColourBoard struct {
-    id     string
-    colour color.Color
+    id          string
+    colour      color.Color
+    cachedImage image.Image
 }
 
 func NewSingleColourBoard(id string) *SingleColourBoard {
@@ -195,10 +214,10 @@ func NewSingleColourBoard(id string) *SingleColourBoard {
 func (b *SingleColourBoard) GetId() string   { return b.id }
 func (b *SingleColourBoard) GetName() string { return "Single Colour" }
 func (b *SingleColourBoard) GetSupportedDimensions() []types.BoardDimensions { return nil }
-func (b *SingleColourBoard) GetType() types.BoardType        { return types.BoardTypeStatic }
-func (b *SingleColourBoard) GetDatasourceType() string       { return "" }
+func (b *SingleColourBoard) GetType() types.BoardType  { return types.BoardTypeStatic }
+func (b *SingleColourBoard) GetDatasourceType() string { return "" }
 
-func (b *SingleColourBoard) Init(cfg json.RawMessage, _ types.Datasource[any]) error {
+func (b *SingleColourBoard) Init(cfg json.RawMessage, _ types.Datasource[any], dims types.BoardDimensions) error {
     if len(cfg) > 0 {
         var c struct{ Colour string `json:"colour"` }
         if err := json.Unmarshal(cfg, &c); err != nil {
@@ -208,13 +227,14 @@ func (b *SingleColourBoard) Init(cfg json.RawMessage, _ types.Datasource[any]) e
             b.colour = hexToColor(c.Colour)
         }
     }
+    img := image.NewRGBA(image.Rect(0, 0, dims.Width, dims.Height))
+    draw.Draw(img, img.Bounds(), &image.Uniform{b.colour}, image.Point{}, draw.Src)
+    b.cachedImage = img
     return nil
 }
 
-func (b *SingleColourBoard) Render(dims types.BoardDimensions) image.Image {
-    img := image.NewRGBA(image.Rect(0, 0, dims.Width, dims.Height))
-    draw.Draw(img, img.Bounds(), &image.Uniform{b.colour}, image.Point{}, draw.Src)
-    return img
+func (b *SingleColourBoard) Render() image.Image {
+    return b.cachedImage
 }
 ```
 
@@ -226,21 +246,29 @@ type Datasource[T any] interface {
     GetName() string
     GetType() string
     GetData() T
+    Start(ctx context.Context) error
+    DataChanged() <-chan struct{}
 }
 ```
 
 - **`GetType()`** — uniquely identifies what data this datasource provides. Must match the `GetDatasourceType()` of any board that uses it. See [Type String Convention](#type-string-convention).
 - **`GetData()`** — returns the current cached data. Must be non-blocking. Never do network I/O here.
+- **`Start(ctx)`** — called once at startup before any board is initialized. Launch your background fetch goroutine here. Use `ctx` for cancellation — when the app shuts down (SIGINT/SIGTERM), the context is cancelled and your goroutine should exit. Return a non-nil error to signal that the datasource cannot start; it will be removed from the map and not wired to any board.
+- **`DataChanged()`** — return a channel that your datasource sends to whenever new data arrives and an immediate re-render is warranted. The scheduler selects on this channel alongside the frame timer, so a signal causes the board to re-render without waiting for the next tick. Return `nil` if you don't need push notifications — a nil channel blocks forever in a `select`, which is the correct no-op.
 
 ### Datasource with Background Refresh
 
 ```go
 type WeatherDatasource struct {
-    mu   sync.RWMutex
-    data WeatherData
+    mu      sync.RWMutex
+    data    WeatherData
+    changed chan struct{}
 }
 
-// GetType identifies the data contract for board matching.
+func NewWeatherDatasource() *WeatherDatasource {
+    return &WeatherDatasource{changed: make(chan struct{}, 1)}
+}
+
 func (d *WeatherDatasource) GetType() string { return "yourname/my-plugin/weather" }
 
 func (d *WeatherDatasource) GetData() WeatherData {
@@ -249,24 +277,47 @@ func (d *WeatherDatasource) GetData() WeatherData {
     return d.data
 }
 
-// StartFetching launches the background refresh loop.
-// Call this from the plugin's Configure() method.
-func (d *WeatherDatasource) StartFetching(interval time.Duration) {
+func (d *WeatherDatasource) Start(ctx context.Context) error {
     go func() {
-        for range time.Tick(interval) {
-            data, err := fetchWeatherFromAPI()
-            if err != nil {
-                continue
+        ticker := time.NewTicker(5 * time.Minute)
+        defer ticker.Stop()
+        for {
+            select {
+            case <-ctx.Done():
+                return
+            case <-ticker.C:
+                data, err := fetchWeatherFromAPI()
+                if err != nil {
+                    continue
+                }
+                d.mu.Lock()
+                d.data = data
+                d.mu.Unlock()
+                // Non-blocking send: if the channel is already full, a re-render
+                // is already pending and we don't need to queue another.
+                select {
+                case d.changed <- struct{}{}:
+                default:
+                }
             }
-            d.mu.Lock()
-            d.data = data
-            d.mu.Unlock()
         }
     }()
+    return nil
 }
+
+func (d *WeatherDatasource) DataChanged() <-chan struct{} { return d.changed }
 ```
 
-The datasource manages its own goroutine. `GetData()` always returns immediately with the most recently cached value — it is called on every render frame and must never block.
+`GetData()` always returns immediately with the most recently cached value — it is called on the render path and must never block. The background goroutine started in `Start()` handles all I/O and exits cleanly when `ctx` is cancelled.
+
+### Datasource without Push Notifications
+
+If your datasource's data is always fresh on demand (e.g. reading from an in-process clock), implement no-op versions:
+
+```go
+func (d *MyDatasource) Start(_ context.Context) error { return nil }
+func (d *MyDatasource) DataChanged() <-chan struct{}   { return nil }
+```
 
 ## Type String Convention
 
@@ -342,6 +393,10 @@ If your board needs a datasource, declare it and reference it:
 - [ ] `package main` with an exported `Plugin` variable of type `UdbPlugin`
 - [ ] `GetId()` returns the same string used as `id` in `config.json`
 - [ ] Board `GetDatasourceType()` matches datasource `GetType()` exactly (or returns `""`)
+- [ ] `Board.Init()` accepts `dimensions BoardDimensions` and pre-computes all layout values that depend on display size
+- [ ] `Board.Render()` takes no parameters — uses values pre-computed in `Init()`
+- [ ] `Datasource.Start(ctx)` launches any background goroutine and returns immediately; goroutine exits when `ctx` is cancelled
+- [ ] `Datasource.DataChanged()` returns a channel (buffered, size 1) if push notifications are needed, or `nil` otherwise
 - [ ] `GetData()` never blocks — background goroutine handles fetching
 - [ ] `Render()` only constructs images from cached data — no I/O on the render path
 - [ ] Built with `go build -buildmode=plugin` on Linux, same Go version as `udb-core`

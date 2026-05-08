@@ -16,9 +16,10 @@ ConfigLoader ──► RootConfig
           │          │                    │
           ▼          ▼                    ▼
       Display    LoadPlugins()     LoadDatasources()
-      (hub75 /               └──► LoadBoards()
-       http /                └──► WireDatasources()
-       stub)                 └──► InitBoards()
+      (hub75 /               └──► StartDatasources()
+       http /                └──► LoadBoards()
+       stub)                 └──► WireDatasources()
+          │                  └──► InitBoards()
           │                          │
           └──────────────────────────┘
                         │
@@ -50,7 +51,9 @@ Plugins live at `./plugins/{id}/{id}.so` by default, or at a path specified expl
 1. **Explicit**: the board config specifies a `datasource` ID — the previously-loaded datasource with that ID is used directly.
 2. **Auto-match**: if no datasource ID is given, the core compares `board.GetDatasourceType()` against `datasource.GetType()` across all loaded datasources and picks the one that matches. A warning is logged if zero or multiple matches are found.
 
-`InitBoards()` calls `board.Init(config, datasource)` on each board. Boards that fail to initialize are dropped with a warning.
+`StartDatasources()` calls `datasource.Start(ctx)` on each loaded datasource before wiring. Datasources that return an error from `Start()` are removed from the map so they cannot be wired to boards.
+
+`InitBoards()` calls `board.Init(config, datasource, dimensions)` on each board, passing the display dimensions alongside the config and datasource. Boards receive dimensions here so they can pre-compute layout (font sizes, image buffers, etc.) once at startup rather than on every render call. Boards that fail to initialize are dropped with a warning.
 
 ### Scheduler
 
@@ -61,6 +64,8 @@ Plugins live at `./plugins/{id}/{id}.so` by default, or at a path specified expl
 | **Static** | `Render()` called once; result held on display for `durationSeconds` |
 | **Animated** | `Render()` returns a full `[]AnimationFrame`; frames are cycled in order until duration elapses (or indefinitely if `durationSeconds` is 0) |
 | **Dynamic** | `Render()` is called repeatedly in a tight loop; each call returns one `AnimationFrame` whose `.Duration` controls the sleep between frames; continues until duration elapses |
+
+For dynamic boards, the scheduler also listens on the datasource's `DataChanged()` channel. If the datasource signals a change, the board is re-rendered immediately rather than waiting for the frame timer to expire. Datasources that return `nil` from `DataChanged()` opt out of this — a nil channel blocks forever in a `select`, which is the correct no-op.
 
 The scheduler respects context cancellation — when `SIGINT` or `SIGTERM` is received, the context is cancelled and the loop exits cleanly, allowing `Display.CloseDisplay()` to release hardware resources.
 
@@ -92,14 +97,27 @@ The key invariant: **boards and datasources are matched by type string**. A boar
 ## Data Flow at Runtime
 
 ```
-Datasource goroutine (plugin-managed)
-    │  fetches data from network / file / etc.
-    │  caches result internally
-    ▼
-datasource.GetData()  ◄── called by board inside Render()
+startup
     │
     ▼
-board.Render(dimensions)
+datasource.Start(ctx)          ← datasource launches its background fetch goroutine here;
+    │                            goroutine exits when ctx is cancelled (SIGINT / SIGTERM)
+    │
+    ├── (periodic) fetch from network / file / etc. → cache internally
+    │
+    └── (optional) signal datasource.DataChanged()  ← triggers immediate re-render
+            │
+            ▼
+board.Init(config, datasource, dimensions)  ← board pre-computes layout (font sizes,
+    │                                          image buffers) using the display dimensions
+    ▼
+── render loop ──────────────────────────────────────────────────────
+    │
+    ▼
+datasource.GetData()  ◄── called by board inside Render(); must return cached value instantly
+    │
+    ▼
+board.Render()             ← no dimensions parameter; uses values pre-computed in Init()
     │  constructs image.Image from cached data
     ▼
 display.Render(img)
@@ -108,4 +126,4 @@ display.Render(img)
 LED panel / browser / log
 ```
 
-Datasources are responsible for their own background fetch loop. `GetData()` must return a cached value immediately — it is called on the render path and must never block on I/O.
+Datasources are responsible for their own background fetch loop, started in `Start()`. `GetData()` must return a cached value immediately — it is called on the render path and must never block on I/O.

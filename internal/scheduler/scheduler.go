@@ -11,20 +11,20 @@ import (
 )
 
 // Run cycles through boards in sequence until ctx is cancelled.
-func Run(ctx context.Context, d display.Display, boards []plugins.BoardEntry, dims types.BoardDimensions) {
+func Run(ctx context.Context, d display.Display, boards []plugins.BoardEntry) {
 	for ctx.Err() == nil {
 		for _, entry := range boards {
 			if ctx.Err() != nil {
 				break
 			}
-			runBoard(ctx, d, entry, dims)
+			runBoard(ctx, d, entry)
 		}
 	}
 }
 
 // runBoard dispatches to the correct render path based on board type and holds
 // for the configured duration before returning.
-func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry, dims types.BoardDimensions) {
+func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry) {
 	duration := time.Duration(entry.Config.DurationSeconds) * time.Second
 
 	switch entry.Board.GetType() {
@@ -34,7 +34,7 @@ func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry, 
 			fmt.Printf("Warning: board %s declared static but doesn't implement StaticBoard\n", entry.Config.BoardId)
 			return
 		}
-		if err := d.Render(staticBoard.Render(dims)); err != nil {
+		if err := d.Render(staticBoard.Render()); err != nil {
 			fmt.Printf("Render error (board %s): %v\n", entry.Config.BoardId, err)
 		}
 		if duration > 0 {
@@ -50,7 +50,7 @@ func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry, 
 			fmt.Printf("Warning: board %s declared animated but doesn't implement AnimatedBoard\n", entry.Config.BoardId)
 			return
 		}
-		frames := animBoard.Render(dims)
+		frames := animBoard.Render()
 		deadline := time.Now().Add(duration)
 		for ctx.Err() == nil && (duration == 0 || time.Now().Before(deadline)) {
 			for _, frame := range frames {
@@ -76,15 +76,21 @@ func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry, 
 			fmt.Printf("Warning: board %s declared dynamic but doesn't implement DynamicBoard\n", entry.Config.BoardId)
 			return
 		}
+		var changed <-chan struct{}
+		if entry.Datasource != nil {
+			changed = entry.Datasource.DataChanged()
+		}
 		deadline := time.Now().Add(duration)
 		for ctx.Err() == nil && (duration == 0 || time.Now().Before(deadline)) {
-			frame := dynBoard.Render(dims)
+			frame := dynBoard.Render()
 			if err := d.Render(frame.Img); err != nil {
 				fmt.Printf("Render error (board %s): %v\n", entry.Config.BoardId, err)
 			}
 			select {
 			case <-ctx.Done():
+				return
 			case <-time.After(frame.Duration):
+			case <-changed: // nil channel blocks forever — natural no-op when datasource has no push notifications
 			}
 		}
 	}
