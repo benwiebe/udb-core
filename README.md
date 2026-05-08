@@ -81,4 +81,4 @@ Full configuration reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 
 ## License
 
-MIT
+GPL-3.0 - See [LICENSE](LICENSE) for full license text.
