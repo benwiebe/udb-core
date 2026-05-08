@@ -93,11 +93,11 @@ func WireDatasources(boards []BoardEntry, datasourceMap map[string]types.Datasou
 	}
 }
 
-// InitBoards initializes each board and returns only those that succeeded.
-func InitBoards(boards []BoardEntry) []BoardEntry {
+// InitBoards initializes each board with the given display dimensions and returns only those that succeeded.
+func InitBoards(boards []BoardEntry, dims types.BoardDimensions) []BoardEntry {
 	initialized := make([]BoardEntry, 0, len(boards))
 	for _, entry := range boards {
-		if err := entry.Board.Init(entry.Config.Config, entry.Datasource); err != nil {
+		if err := entry.Board.Init(entry.Config.Config, entry.Datasource, dims); err != nil {
 			fmt.Printf("Error initializing board %s: %v\n", entry.Config.BoardId, err)
 			continue
 		}

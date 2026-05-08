@@ -25,28 +25,6 @@ func main() {
 	appConfig := configLoader.GetConfig()
 	fmt.Println("Config loaded")
 
-	pluginData := plugins.LoadPlugins(appConfig.Plugins)
-	fmt.Println("Plugins loaded")
-
-	datasourceMap := plugins.LoadDatasources(pluginData, appConfig.Datasources)
-	fmt.Println("Datasources loaded")
-
-	boards := plugins.LoadBoards(pluginData, appConfig.Boards)
-	plugins.WireDatasources(boards, datasourceMap)
-	initializedBoards := plugins.InitBoards(boards)
-
-	displayInstance, err := display.NewDisplay(appConfig.Display)
-	if err != nil {
-		fmt.Printf("Failed to initialize display: %v\n", err)
-		return
-	}
-	defer displayInstance.CloseDisplay()
-
-	dims := types.BoardDimensions{
-		Width:  appConfig.Display.Width,
-		Height: appConfig.Display.Height,
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -58,11 +36,34 @@ func main() {
 		cancel()
 	}()
 
+	pluginData := plugins.LoadPlugins(appConfig.Plugins)
+	fmt.Println("Plugins loaded")
+
+	datasourceMap := plugins.LoadDatasources(pluginData, appConfig.Datasources)
+	datasourceMap = plugins.StartDatasources(ctx, datasourceMap)
+	fmt.Println("Datasources started")
+
+	dims := types.BoardDimensions{
+		Width:  appConfig.Display.Width,
+		Height: appConfig.Display.Height,
+	}
+
+	boards := plugins.LoadBoards(pluginData, appConfig.Boards)
+	plugins.WireDatasources(boards, datasourceMap)
+	initializedBoards := plugins.InitBoards(boards, dims)
+
+	displayInstance, err := display.NewDisplay(appConfig.Display)
+	if err != nil {
+		fmt.Printf("Failed to initialize display: %v\n", err)
+		return
+	}
+	defer displayInstance.CloseDisplay()
+
 	if len(initializedBoards) == 0 {
 		fmt.Println("Warning: no boards to display")
 		return
 	}
 
 	fmt.Println("Display loop started, press Ctrl+C to stop")
-	scheduler.Run(ctx, displayInstance, initializedBoards, dims)
+	scheduler.Run(ctx, displayInstance, initializedBoards)
 }
