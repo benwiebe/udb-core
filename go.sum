@@ -3,8 +3,8 @@ dmitri.shuralyov.com/gpu/mtl v0.0.0-20221208032759-85de2813cf6b h1:a26Bdkl2B9PmY
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20221208032759-85de2813cf6b/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/BurntSushi/xgb v0.0.0-20210121224620-deaf085860bc/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
-github.com/benwiebe/udb-plugin-library v0.1.0 h1:xP1M20jYti6yL69Pr6EvcS0vwEHOkrAKoQ7+KeIKiKo=
-github.com/benwiebe/udb-plugin-library v0.1.0/go.mod h1:eFhQ17MqcSd7KSRqHUq3cyay234HRPeZyrBbrvoBPco=
+github.com/benwiebe/udb-plugin-library v0.2.0 h1:vRwleZooik3VK1yQQ88iPNcFr0SIZili5ZIU5c5slTs=
+github.com/benwiebe/udb-plugin-library v0.2.0/go.mod h1:eFhQ17MqcSd7KSRqHUq3cyay234HRPeZyrBbrvoBPco=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/disintegration/imaging v1.6.2/go.mod h1:44/5580QXChDfwIclfc/PCwrr44amcmDAg8hxG0Ewe4=
 github.com/fogleman/gg v1.3.0/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
