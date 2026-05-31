@@ -10,6 +10,7 @@ import (
 	"image"
 	"image/draw"
 	"image/jpeg"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -41,7 +42,7 @@ func newHttpDisplay(cfg config.DisplayConfig) (Display, error) {
 	mux.HandleFunc("/", d.streamHandler)
 	go http.ListenAndServe(":8080", mux)
 
-	fmt.Println("HTTP display streaming at http://localhost:8080")
+	slog.Info("HTTP display streaming", "url", "http://localhost:8080")
 	return d, nil
 }
 

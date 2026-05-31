@@ -1,7 +1,7 @@
 package plugins
 
 import (
-	"fmt"
+	"log/slog"
 
 	"github.com/benwiebe/udb-core/internal/config"
 	udb_plugin_library "github.com/benwiebe/udb-plugin-library"
@@ -21,29 +21,26 @@ func LoadBoards(pluginData PluginData, boardConfigs config.BoardsConfig) []Board
 	for _, boardConfig := range boardConfigs {
 		plugin := pluginData.ById[boardConfig.Plugin]
 		if plugin == nil {
-			fmt.Printf("Error: plugin %s not found or failed to load\n", boardConfig.Plugin)
+			slog.Error("plugin not found or failed to load", "plugin", boardConfig.Plugin)
 			continue
 		}
 
 		pluginType := (*plugin).GetPluginType()
 		if pluginType == types.PluginTypeDatasource {
-			fmt.Printf("Error: plugin %s is a datasource-only plugin and cannot provide boards\n",
-				(*plugin).GetName())
+			slog.Error("plugin cannot provide boards (datasource-only)", "plugin", (*plugin).GetName())
 			continue
 		}
 
 		if pluginType == types.PluginTypeBoards || pluginType == types.PluginTypeCombined {
 			typedPlugin, ok := (*plugin).(udb_plugin_library.UdbBoardPlugin)
 			if !ok {
-				fmt.Printf("Error: plugin %s does not implement UdbBoardPlugin interface\n",
-					(*plugin).GetName())
+				slog.Error("plugin does not implement UdbBoardPlugin", "plugin", (*plugin).GetName())
 				continue
 			}
 
 			b := typedPlugin.GetBoardMap()[boardConfig.BoardId]
 			if b == nil {
-				fmt.Printf("Error: plugin %s does not contain board %s\n",
-					(*plugin).GetName(), boardConfig.BoardId)
+				slog.Error("plugin does not contain board", "plugin", (*plugin).GetName(), "board", boardConfig.BoardId)
 				continue
 			}
 
@@ -59,8 +56,7 @@ func WireDatasources(boards []BoardEntry, datasourceMap map[string]types.Datasou
 		if entry.Config.Datasource != "" {
 			ds, found := datasourceMap[entry.Config.Datasource]
 			if !found {
-				fmt.Printf("Error: datasource %q not found for board %s\n",
-					entry.Config.Datasource, entry.Config.BoardId)
+				slog.Error("datasource not found for board", "datasource", entry.Config.Datasource, "board", entry.Config.BoardId)
 				continue
 			}
 			boards[i].Datasource = ds
@@ -82,13 +78,11 @@ func WireDatasources(boards []BoardEntry, datasourceMap map[string]types.Datasou
 		switch len(matches) {
 		case 1:
 			boards[i].Datasource = matches[0]
-			fmt.Printf("Auto-wired datasource %q for board %s\n", requiredType, entry.Config.BoardId)
+			slog.Info("auto-wired datasource", "type", requiredType, "board", entry.Config.BoardId)
 		case 0:
-			fmt.Printf("Warning: no datasource of type %q found for board %s; board will have no data\n",
-				requiredType, entry.Config.BoardId)
+			slog.Warn("no datasource found for board; board will have no data", "type", requiredType, "board", entry.Config.BoardId)
 		default:
-			fmt.Printf("Warning: multiple datasources of type %q available for board %s; specify datasource explicitly\n",
-				requiredType, entry.Config.BoardId)
+			slog.Warn("multiple datasources match board type; specify datasource explicitly", "type", requiredType, "board", entry.Config.BoardId)
 		}
 	}
 }
@@ -98,11 +92,11 @@ func InitBoards(boards []BoardEntry, dims types.BoardDimensions) []BoardEntry {
 	initialized := make([]BoardEntry, 0, len(boards))
 	for _, entry := range boards {
 		if err := entry.Board.Init(entry.Config.Config, entry.Datasource, dims); err != nil {
-			fmt.Printf("Error initializing board %s: %v\n", entry.Config.BoardId, err)
+			slog.Error("failed to initialize board", "board", entry.Config.BoardId, "err", err)
 			continue
 		}
 		initialized = append(initialized, entry)
 	}
-	fmt.Printf("%d board(s) initialized\n", len(initialized))
+	slog.Info("boards initialized", "count", len(initialized))
 	return initialized
 }

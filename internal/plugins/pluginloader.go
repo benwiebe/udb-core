@@ -1,7 +1,7 @@
 package plugins
 
 import (
-	"fmt"
+	"log/slog"
 	"plugin"
 
 	"github.com/benwiebe/udb-core/internal/config"
@@ -26,16 +26,15 @@ func LoadPlugins(pluginsConfig config.PluginsConfig) PluginData {
 	pluginList := make(PluginList, 0, len(pluginsConfig))
 	pluginMap := make(PluginMap, len(pluginsConfig))
 	for _, pluginConfig := range pluginsConfig {
-		// We use plugin.Open to load the plugin by path
 		plg, err := plugin.Open(GetPluginPath(pluginConfig))
 		if err != nil {
-			fmt.Printf("Error loading plugin %s: %v\n", pluginConfig.ID, err)
+			slog.Error("failed to load plugin", "plugin", pluginConfig.ID, "err", err)
 			continue
 		}
 
 		plgVar, err := plg.Lookup("Plugin")
 		if err != nil {
-			fmt.Printf("Error finding 'Plugin' symbol in plugin %s: %v\n", pluginConfig.ID, err)
+			slog.Error("plugin missing Plugin symbol", "plugin", pluginConfig.ID, "err", err)
 			continue
 		}
 
@@ -47,12 +46,12 @@ func LoadPlugins(pluginsConfig config.PluginsConfig) PluginData {
 		} else if direct, ok := plgVar.(udb_plugin_library.UdbPlugin); ok {
 			typedPluginVar = direct
 		} else {
-			fmt.Printf("Error: plugin %s does not implement UdbPlugin interface\n", pluginConfig.ID)
+			slog.Error("plugin does not implement UdbPlugin", "plugin", pluginConfig.ID)
 			continue
 		}
 		err = typedPluginVar.Configure(pluginConfig.Config)
 		if err != nil {
-			fmt.Printf("Error configuring plugin %s: %v\n", pluginConfig.ID, err)
+			slog.Error("failed to configure plugin", "plugin", pluginConfig.ID, "err", err)
 			continue
 		}
 		pluginList = append(pluginList, &typedPluginVar)

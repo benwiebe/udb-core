@@ -5,8 +5,8 @@
 package display
 
 import (
-	"fmt"
 	"image"
+	"log/slog"
 
 	"github.com/benwiebe/udb-core/internal/config"
 )
@@ -18,15 +18,15 @@ func init() {
 type StubDisplay struct{}
 
 func newStubDisplay(cfg config.DisplayConfig) (Display, error) {
-	fmt.Printf("Stub display initialized (%dx%d)\n", cfg.Width, cfg.Height)
+	slog.Info("stub display initialized", "width", cfg.Width, "height", cfg.Height)
 	return StubDisplay{}, nil
 }
 
 func (d StubDisplay) Render(img image.Image) error {
-	fmt.Printf("Stub display render: %dx%d image\n", img.Bounds().Dx(), img.Bounds().Dy())
+	slog.Debug("stub display render", "width", img.Bounds().Dx(), "height", img.Bounds().Dy())
 	return nil
 }
 
 func (d StubDisplay) CloseDisplay() {
-	fmt.Println("Stub display closed")
+	slog.Info("stub display closed")
 }

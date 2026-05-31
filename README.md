@@ -24,6 +24,7 @@ go build -o udb .
 
 # 4. Configure your setup (see docs/CONFIGURATION.md)
 cp config.json.example config.json
+#    On macOS or without hardware, set display.type to "http" in config.json
 
 # 5. Run
 ./udb

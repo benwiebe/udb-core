@@ -2,7 +2,7 @@ package plugins
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 
 	"github.com/benwiebe/udb-core/internal/config"
 	udb_plugin_library "github.com/benwiebe/udb-plugin-library"
@@ -15,28 +15,25 @@ func LoadDatasources(pluginData PluginData, dsConfigs config.DatasourcesConfig) 
 	for _, dsConfig := range dsConfigs {
 		plugin := pluginData.ById[dsConfig.Plugin]
 		if plugin == nil {
-			fmt.Printf("Error: plugin %s not found or failed to load\n", dsConfig.Plugin)
+			slog.Error("plugin not found or failed to load", "plugin", dsConfig.Plugin)
 			continue
 		}
 
 		pluginType := (*plugin).GetPluginType()
 		if pluginType == types.PluginTypeBoards {
-			fmt.Printf("Error: plugin %s is a boards-only plugin and cannot provide datasources\n",
-				(*plugin).GetName())
+			slog.Error("plugin cannot provide datasources (boards-only)", "plugin", (*plugin).GetName())
 			continue
 		}
 
 		typedPlugin, ok := (*plugin).(udb_plugin_library.UdbDatasourcePlugin)
 		if !ok {
-			fmt.Printf("Error: plugin %s does not implement UdbDatasourcePlugin interface\n",
-				(*plugin).GetName())
+			slog.Error("plugin does not implement UdbDatasourcePlugin", "plugin", (*plugin).GetName())
 			continue
 		}
 
 		ds := typedPlugin.GetDatasourceMap()[dsConfig.DatasourceId]
 		if ds == nil {
-			fmt.Printf("Error: plugin %s does not contain datasource %s\n",
-				(*plugin).GetName(), dsConfig.DatasourceId)
+			slog.Error("plugin does not contain datasource", "plugin", (*plugin).GetName(), "datasource", dsConfig.DatasourceId)
 			continue
 		}
 
@@ -51,7 +48,7 @@ func StartDatasources(ctx context.Context, datasourceMap map[string]types.Dataso
 	started := make(map[string]types.Datasource[any], len(datasourceMap))
 	for id, ds := range datasourceMap {
 		if err := ds.Start(ctx); err != nil {
-			fmt.Printf("Error starting datasource %s: %v; it will not be wired to any boards\n", id, err)
+			slog.Error("failed to start datasource; it will not be wired to any boards", "datasource", id, "err", err)
 			continue
 		}
 		started[id] = ds

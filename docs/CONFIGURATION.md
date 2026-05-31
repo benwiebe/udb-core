@@ -135,9 +135,19 @@ The ordered list of boards to display. UDB cycles through them in sequence.
 |-------|------|----------|-------------|
 | `plugin` | string | Yes | The `id` of the plugin that provides this board. |
 | `boardId` | string | Yes | The board identifier within the plugin (from `GetBoardMap()`). |
-| `durationSeconds` | int | No | How long to show this board before advancing to the next. `0` or omitted means the board runs indefinitely (only useful if it's the only board, or for animated/dynamic boards that self-terminate). |
+| `durationSeconds` | int | No | How long to show this board before advancing to the next. `0` or omitted behaves differently per board type — see below. |
 | `config` | object | No | Arbitrary JSON passed to the board during `Init()`. |
 | `datasource` | string | No | The `id` of the datasource to wire to this board. If omitted, the core will attempt to auto-match by type. |
+
+### durationSeconds = 0 behavior by board type
+
+| Board type | Behavior when `durationSeconds` is 0 or omitted |
+|------------|--------------------------------------------------|
+| `static` | Renders once then immediately advances to the next board. The image is shown for only one display cycle before the loop moves on. |
+| `animated` | Plays through all frames exactly once, then advances to the next board. |
+| `dynamic` | Loops indefinitely, calling `Render()` on each frame tick, until the process is stopped. Only useful if it's the only board in the list. |
+
+For `static` and `animated` boards, set `durationSeconds` to control how long they hold before advancing.
 
 ### Example
 

@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/benwiebe/udb-core/internal/display"
@@ -31,11 +31,11 @@ func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry) 
 	case types.BoardTypeStatic:
 		staticBoard, ok := entry.Board.(types.StaticBoard[any])
 		if !ok {
-			fmt.Printf("Warning: board %s declared static but doesn't implement StaticBoard\n", entry.Config.BoardId)
+			slog.Warn("board declared static but doesn't implement StaticBoard", "board", entry.Config.BoardId)
 			return
 		}
 		if err := d.Render(staticBoard.Render()); err != nil {
-			fmt.Printf("Render error (board %s): %v\n", entry.Config.BoardId, err)
+			slog.Error("render error", "board", entry.Config.BoardId, "err", err)
 		}
 		if duration > 0 {
 			select {
@@ -47,7 +47,7 @@ func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry) 
 	case types.BoardTypeAnimated:
 		animBoard, ok := entry.Board.(types.AnimatedBoard[any])
 		if !ok {
-			fmt.Printf("Warning: board %s declared animated but doesn't implement AnimatedBoard\n", entry.Config.BoardId)
+			slog.Warn("board declared animated but doesn't implement AnimatedBoard", "board", entry.Config.BoardId)
 			return
 		}
 		frames := animBoard.Render()
@@ -58,7 +58,7 @@ func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry) 
 					break
 				}
 				if err := d.Render(frame.Img); err != nil {
-					fmt.Printf("Render error (board %s): %v\n", entry.Config.BoardId, err)
+					slog.Error("render error", "board", entry.Config.BoardId, "err", err)
 				}
 				sleep := frame.Duration
 				if duration > 0 {
@@ -79,7 +79,7 @@ func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry) 
 	case types.BoardTypeDynamic:
 		dynBoard, ok := entry.Board.(types.DynamicBoard[any])
 		if !ok {
-			fmt.Printf("Warning: board %s declared dynamic but doesn't implement DynamicBoard\n", entry.Config.BoardId)
+			slog.Warn("board declared dynamic but doesn't implement DynamicBoard", "board", entry.Config.BoardId)
 			return
 		}
 		var changed <-chan struct{}
@@ -90,7 +90,7 @@ func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry) 
 		for ctx.Err() == nil && (duration == 0 || time.Now().Before(deadline)) {
 			frame := dynBoard.Render()
 			if err := d.Render(frame.Img); err != nil {
-				fmt.Printf("Render error (board %s): %v\n", entry.Config.BoardId, err)
+				slog.Error("render error", "board", entry.Config.BoardId, "err", err)
 			}
 			sleep := frame.Duration
 			if duration > 0 {

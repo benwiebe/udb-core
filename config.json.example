@@ -1,0 +1,31 @@
+{
+  "display": {
+    "type": "hub75",
+    "width": 64,
+    "height": 32,
+    "brightness": 80,
+    "gpio_mapping": "adafruit-hat-pwm"
+  },
+  "plugins": [
+    {
+      "id": "my-plugin",
+      "path": "./plugins/my-plugin/my-plugin.so"
+    }
+  ],
+  "datasources": [
+    {
+      "id": "my-data",
+      "plugin": "my-plugin",
+      "datasourceId": "my-datasource",
+      "config": {}
+    }
+  ],
+  "boards": [
+    {
+      "plugin": "my-plugin",
+      "boardId": "my-board",
+      "durationSeconds": 30,
+      "datasource": "my-data"
+    }
+  ]
+}

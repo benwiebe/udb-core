@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,15 +15,15 @@ import (
 )
 
 func main() {
-	fmt.Println("Starting Universal Display Board...")
+	slog.Info("starting Universal Display Board")
 
 	configLoader := config.NewDefaultConfigLoader()
 	if err := configLoader.Load(); err != nil {
-		fmt.Printf("Failed to load config: %v\n", err)
+		slog.Error("failed to load config", "err", err)
 		return
 	}
 	appConfig := configLoader.GetConfig()
-	fmt.Println("Config loaded")
+	slog.Info("config loaded")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -32,16 +32,16 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		fmt.Println("\nShutting down...")
+		slog.Info("shutting down")
 		cancel()
 	}()
 
 	pluginData := plugins.LoadPlugins(appConfig.Plugins)
-	fmt.Println("Plugins loaded")
+	slog.Info("plugins loaded")
 
 	datasourceMap := plugins.LoadDatasources(pluginData, appConfig.Datasources)
 	datasourceMap = plugins.StartDatasources(ctx, datasourceMap)
-	fmt.Println("Datasources started")
+	slog.Info("datasources started")
 
 	dims := types.BoardDimensions{
 		Width:  appConfig.Display.Width,
@@ -54,16 +54,16 @@ func main() {
 
 	displayInstance, err := display.NewDisplay(appConfig.Display)
 	if err != nil {
-		fmt.Printf("Failed to initialize display: %v\n", err)
+		slog.Error("failed to initialize display", "err", err)
 		return
 	}
 	defer displayInstance.CloseDisplay()
 
 	if len(initializedBoards) == 0 {
-		fmt.Println("Warning: no boards to display")
+		slog.Warn("no boards to display")
 		return
 	}
 
-	fmt.Println("Display loop started, press Ctrl+C to stop")
+	slog.Info("display loop started")
 	scheduler.Run(ctx, displayInstance, initializedBoards)
 }
