@@ -35,6 +35,9 @@ go.work.sum
 # OS Files
 .DS_Store
 
+# Build artifacts
+/build/
+
 # Project-specific files
 /config.json
 /udb
