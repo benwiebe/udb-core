@@ -61,9 +61,14 @@ func (d *HttpDisplay) Render(img image.Image) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	for ch := range d.clients {
+		// Drain any unconsumed frame so the latest always wins.
+		select {
+		case <-ch:
+		default:
+		}
 		select {
 		case ch <- frame:
-		default: // skip slow clients rather than blocking the render loop
+		default:
 		}
 	}
 	return nil

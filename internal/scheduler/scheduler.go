@@ -60,9 +60,15 @@ func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry) 
 				if err := d.Render(frame.Img); err != nil {
 					fmt.Printf("Render error (board %s): %v\n", entry.Config.BoardId, err)
 				}
+				sleep := frame.Duration
+				if duration > 0 {
+					if remaining := time.Until(deadline); remaining < sleep {
+						sleep = remaining
+					}
+				}
 				select {
 				case <-ctx.Done():
-				case <-time.After(frame.Duration):
+				case <-time.After(sleep):
 				}
 			}
 			if duration == 0 {
@@ -86,10 +92,16 @@ func runBoard(ctx context.Context, d display.Display, entry plugins.BoardEntry) 
 			if err := d.Render(frame.Img); err != nil {
 				fmt.Printf("Render error (board %s): %v\n", entry.Config.BoardId, err)
 			}
+			sleep := frame.Duration
+			if duration > 0 {
+				if remaining := time.Until(deadline); remaining < sleep {
+					sleep = remaining
+				}
+			}
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(frame.Duration):
+			case <-time.After(sleep):
 			case <-changed: // nil channel blocks forever — natural no-op when datasource has no push notifications
 			}
 		}
