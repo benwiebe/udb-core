@@ -65,6 +65,7 @@ Full configuration reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Full `config.json` reference |
 | [docs/PLUGIN_AUTHORING.md](docs/PLUGIN_AUTHORING.md) | How to write your own boards and datasources |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How UDB works internally |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Planned post-MVP enhancements |
 
 ## Repository Structure
 

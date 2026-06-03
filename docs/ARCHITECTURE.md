@@ -127,3 +127,15 @@ LED panel / browser / log
 ```
 
 Datasources are responsible for their own background fetch loop, started in `Start()`. `GetData()` must return a cached value immediately — it is called on the render path and must never block on I/O.
+
+## Design Decisions
+
+**Go generics (`[T any]`)** — used throughout the plugin library to keep board/datasource pairs type-safe without requiring plugins to use `interface{}` or reflection. The actual data type `T` only needs to match between a paired board and datasource; the core treats everything as `any`.
+
+**`.so` dynamic loading** — Go's `plugin` package is Linux-only at runtime (macOS has partial support; Windows has none). This is an acceptable constraint given the target hardware (Raspberry Pi). The tradeoff is that plugins must be compiled with the same Go version as `udb-core`, but it avoids the complexity of an IPC/RPC boundary for MVP.
+
+**`go.work` workspace** — both `udb-core` and `udb-plugin-library` are developed together locally via a Go workspace, avoiding the need to push and tag library releases during active development. Production deployments use tagged releases via `go get`.
+
+**Alert expiry** — when the scheduler adds alert board support, alert events must carry a timestamp. A datasource reconnecting after a drop should not re-fire stale events; the core discards any alert older than a configurable threshold before displaying it.
+
+**Conditional rotation state** — the datasource state used for scheduler conditions (`GetState() string`) is intentionally a lightweight string enum, not the full data object from `GetData()`. The scheduler should not need to understand plugin-specific data types to evaluate routing conditions.
