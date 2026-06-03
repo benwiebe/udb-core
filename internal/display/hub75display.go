@@ -35,6 +35,7 @@ func newHub75Display(displayConfig config.DisplayConfig) (Display, error) {
 	if displayConfig.GpioMapping != "" {
 		hwConfig.HardwareMapping = displayConfig.GpioMapping
 	}
+	hwConfig.DisableHardwarePulsing = displayConfig.DisableHardwarePulsing
 	m, err := rgbmatrix.NewRGBLedMatrix(&hwConfig)
 	if err != nil {
 		return nil, err
@@ -48,7 +49,6 @@ func newHub75Display(displayConfig config.DisplayConfig) (Display, error) {
 
 func (disp Hub75Display) Render(img image.Image) error {
 	canvas := rgbmatrix.NewCanvas(disp.matrix)
-	defer canvas.Close()
 	draw.Draw(canvas, canvas.Bounds(), img, image.Point{}, draw.Src)
 	return canvas.Render()
 }
