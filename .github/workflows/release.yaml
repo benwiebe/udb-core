@@ -1,12 +1,9 @@
+# Disabled: release binaries now require plugin selection at build time.
+# Re-enable once udb-builder (separate repo) is operational.
+# See docs/ROADMAP.md for the planned release flow.
 name: Release for Raspberry Pi
 
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version (e.g. v1.0.0)'
-        required: true
-        type: string
+on: {} # disabled
 
 permissions:
   contents: write

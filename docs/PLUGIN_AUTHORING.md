@@ -1,11 +1,10 @@
 # Plugin Authoring Guide
 
-A UDB plugin is a Go shared library (`.so` file) that provides boards, datasources, or both. This guide walks through building one from scratch.
+A UDB plugin is a normal Go package that provides boards, datasources, or both. It is compiled directly into the UDB binary — there are no `.so` files, no special build modes, and no Linux requirement for development.
 
 ## Prerequisites
 
 - Go 1.21 or later
-- Linux (Go's `plugin` package only supports runtime loading on Linux)
 - [`udb-plugin-library`](https://github.com/benwiebe/udb-plugin-library) as a dependency
 
 ## Concepts
@@ -25,30 +24,31 @@ go mod init github.com/yourname/my-udb-plugin
 go get github.com/benwiebe/udb-plugin-library
 ```
 
-Your project must be `package main` and must export a `Plugin` variable. This is how UDB's runtime finds your plugin entry point.
-
 ## Plugin Entry Point
 
+Plugins register themselves by calling `udb_plugin_library.Register()` from an `init()` function. The blank import of your package in `plugin_imports.go` triggers this automatically at startup.
+
 ```go
-package main
+package my_udb_plugin
 
 import (
     library "github.com/benwiebe/udb-plugin-library"
     "github.com/benwiebe/udb-plugin-library/types"
 )
 
-// Plugin is the exported symbol UDB looks for when loading your .so.
-var Plugin library.UdbPlugin = &MyPlugin{}
+func init() {
+    library.Register(&MyPlugin{})
+}
 
 type MyPlugin struct{}
 
-func (p *MyPlugin) GetId() string                      { return "my-plugin" }
-func (p *MyPlugin) GetName() string                    { return "My Plugin" }
-func (p *MyPlugin) GetPluginType() types.PluginType    { return types.PluginTypeBoards }
+func (p *MyPlugin) GetId() string                          { return "my-plugin" }
+func (p *MyPlugin) GetName() string                        { return "My Plugin" }
+func (p *MyPlugin) GetPluginType() types.PluginType        { return types.PluginTypeBoards }
 func (p *MyPlugin) Configure(cfg types.PluginConfig) error { return nil }
 ```
 
-`GetId()` must match the `id` field in the user's `config.json` plugin entry.
+`GetId()` must match the `id` field in the user's `config.json` plugin entry (if the plugin needs configuration). If it needs no configuration, no `config.json` entry is required at all.
 
 ### Plugin Types
 
@@ -335,24 +335,27 @@ This namespacing prevents collisions when multiple plugins are loaded. Use your 
 
 A board that does not need a datasource returns `""` from `GetDatasourceType()`.
 
-## Building the Plugin
+## Publishing Your Plugin
 
-```bash
-go build -buildmode=plugin -o my-plugin.so .
+Publish your plugin as a normal Go module on GitHub (or any Go module proxy). Users include it by adding a blank import to their UDB binary:
+
+```go
+// In plugin_imports.go
+import (
+    _ "github.com/yourname/my-udb-plugin"
+)
 ```
 
-The output `.so` must be built with the same Go version as `udb-core`. Place the `.so` at `./plugins/my-plugin/my-plugin.so` relative to the UDB working directory, or specify a `path` in config.
-
-> **Important**: Plugins must be compiled on Linux. macOS has partial support for `plugin` mode but runtime loading is unreliable. Windows is not supported.
+When using **udb-builder**, users simply select your plugin by module path and the builder handles the import and compilation.
 
 ## Config.json Wiring
 
-Once your plugin is built and placed, wire it up in `config.json`:
+If your plugin needs configuration (API keys, settings), users add an entry to `plugins` in `config.json`. The `id` must match your plugin's `GetId()`:
 
 ```json
 {
   "plugins": [
-    { "id": "my-plugin", "path": "./plugins/my-plugin.so" }
+    { "id": "my-plugin", "config": { "api_key": "..." } }
   ],
   "boards": [
     {
@@ -365,6 +368,8 @@ Once your plugin is built and placed, wire it up in `config.json`:
 }
 ```
 
+If your plugin needs no configuration, the `plugins` entry can be omitted entirely.
+
 If your board needs a datasource, declare it and reference it:
 
 ```json
@@ -373,8 +378,7 @@ If your board needs a datasource, declare it and reference it:
     {
       "id": "my-data",
       "plugin": "my-plugin",
-      "datasourceId": "my-datasource",
-      "config": { "refreshInterval": "60s" }
+      "datasourceId": "my-datasource"
     }
   ],
   "boards": [
@@ -390,8 +394,9 @@ If your board needs a datasource, declare it and reference it:
 
 ## Checklist
 
-- [ ] `package main` with an exported `Plugin` variable of type `UdbPlugin`
-- [ ] `GetId()` returns the same string used as `id` in `config.json`
+- [ ] Normal Go package (not `package main`); exports nothing special
+- [ ] `init()` calls `udb_plugin_library.Register(&MyPlugin{})`
+- [ ] `GetId()` returns a stable, unique string (matches `id` in `config.json` if configuration is needed)
 - [ ] Board `GetDatasourceType()` matches datasource `GetType()` exactly (or returns `""`)
 - [ ] `Board.Init()` accepts `dimensions BoardDimensions` and pre-computes all layout values that depend on display size
 - [ ] `Board.Render()` takes no parameters — uses values pre-computed in `Init()`
@@ -399,4 +404,3 @@ If your board needs a datasource, declare it and reference it:
 - [ ] `Datasource.DataChanged()` returns a channel (buffered, size 1) if push notifications are needed, or `nil` otherwise
 - [ ] `GetData()` never blocks — background goroutine handles fetching
 - [ ] `Render()` only constructs images from cached data — no I/O on the render path
-- [ ] Built with `go build -buildmode=plugin` on Linux, same Go version as `udb-core`

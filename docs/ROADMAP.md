@@ -4,6 +4,42 @@ This document covers planned post-MVP enhancements. The MVP scope is a simple ro
 
 ---
 
+## udb-builder (separate repo)
+
+A CLI tool that lets users build a custom UDB binary with their chosen plugins without installing Go or Zig.
+
+**How it works:**
+
+1. User picks plugins (by Go module path), target hardware (Pi Zero, Pi 4, Pi 5, etc.), and output location
+2. udb-builder downloads and caches the Go toolchain (like rustup) and Zig (for CGO cross-compilation of the LED matrix library)
+3. It generates `plugin_imports.go` with the appropriate blank imports, runs `go build` with the right `GOOS`/`GOARCH`/`CGO_ENABLED` settings, and outputs a ready-to-run binary
+4. The Pi never compiles anything
+
+**Binary update flow (on-device):**
+
+1. User builds a new binary via udb-builder (or GitHub Actions fork)
+2. Uploads it via the UDB web UI
+3. Core writes it to a temp path, `os.Rename`s it over the current binary (atomic on Linux)
+4. Core calls `systemctl restart udb`; systemd starts the new binary
+
+Config changes (which boards to show, timings, datasource settings) hot-reload without a restart. Plugin changes require a new binary.
+
+---
+
+## On-Device Web Management UI
+
+An embedded LAN-only web server for managing UDB without SSH.
+
+**Planned features:**
+- Live config editing with hot-reload (no restart needed for config-only changes)
+- Binary upload for plugin updates (triggers atomic swap + systemd restart)
+- Display preview (MJPEG stream, already partially implemented via `http` display type)
+- Board/datasource status and logs
+
+One `NOPASSWD` sudoers entry is needed for `systemctl restart udb`.
+
+---
+
 ## Multi-Size Display Support & Auto-Scaling
 
 Displays come in many sizes (32×64, 64×64, 64×128, chained panels, etc.). The planned strategy:
@@ -141,32 +177,15 @@ Users reference a plugin rotation in config:
 
 ---
 
-## Board Builder (Web Tool)
-
-A web-based tool (separate repo, e.g. `udb-builder`) for creating a UDB setup without hand-editing JSON:
-
-1. User selects display hardware (panel size, chained panels)
-2. User browses a **plugin marketplace** or pastes a GitHub URL
-3. For each plugin, the builder shows available boards/datasources and prompts for config values (sourced from a plugin-provided schema)
-4. User arranges boards into a rotation, sets durations, optionally configures schedules and alert boards
-5. Builder outputs a `config.json` or a pre-built disk image for a fresh Raspberry Pi
-
-**Plugin marketplace:** a central registry (GitHub-hosted JSON index) listing plugins with metadata. Plugins self-submit by opening a PR to the registry repo.
-
----
-
 ## Other Enhancements
 
 | Feature | Description |
 |---------|-------------|
 | Hot-reload config | Watch `config.json` for changes and reload without restart |
-| Plugin hot-reload | Reload a plugin `.so` without restarting the whole app |
 | Multiple displays | Drive more than one LED panel simultaneously |
 | Startup splash | Show a boot animation while datasources initialize |
 | Animation caching | Cache pre-rendered `AnimatedBoard` frames in RAM |
 | Multi-zone display | Split a large panel into regions, each showing a different board |
-| Plugin sandboxing | Run plugins in a separate process with an RPC boundary for stability isolation |
-| Plugin versioning | Compatibility checks between plugin-library version and plugin build |
 | gRPC/HTTP datasources | Built-in adapter so datasources can run on a separate machine |
 | Additional hardware | Support e-ink, OLED, etc. via the `Display` interface |
 | Animation streaming | `AnimatedBoard.Render()` returns frames one at a time rather than the full slice, capping peak memory for long animations |

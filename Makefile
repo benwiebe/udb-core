@@ -10,11 +10,23 @@ export CGO_CFLAGS  := -I$(LIB_DIR)/include
 export CGO_LDFLAGS := -L$(LIB_DIR)/lib -lrgbmatrix -lstdc++ -lm
 endif
 
+# Space-separated list of plugin module paths (with optional @version) to include.
+# When set, plugin_imports.go is regenerated before building.
+# When unset, whatever is already in plugin_imports.go is used.
+#
+# Examples:
+#   make build PLUGINS="github.com/benwiebe/udb-plugin-nhl"
+#   make build PLUGINS="github.com/benwiebe/udb-plugin-nhl@v1.2.0 github.com/benwiebe/udb-plugin-weather"
+PLUGINS ?=
+
 .PHONY: all build test clean deps tidy setup-lib fmt vet
 
 all: tidy deps build
 
 build: setup-lib
+ifneq ($(PLUGINS),)
+	./scripts/build-with-plugins.sh $(PLUGINS)
+endif
 	go build -v -o $(OUTPUT) .
 
 test: setup-lib
