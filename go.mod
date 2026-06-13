@@ -6,7 +6,7 @@ require github.com/tfk1410/go-rpi-rgb-led-matrix v0.0.0-20210404121211-ed43f29cb
 
 require (
 	github.com/benwiebe/udb-plugin-library v0.2.0
-	golang.org/x/image v0.38.0
+	golang.org/x/image v0.39.0
 )
 
 require (
@@ -15,6 +15,7 @@ require (
 	github.com/jezek/xgb v1.1.1 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/nsf/termbox-go v1.1.0 // indirect
+	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
 	golang.org/x/exp/shiny v0.0.0-20250819193227-8b4c13bb791b // indirect
 	golang.org/x/mobile v0.0.0-20250813145510-f12310a0cfd9 // indirect
 	golang.org/x/sys v0.35.0 // indirect
