@@ -19,9 +19,28 @@ endif
 #   make build PLUGINS="github.com/benwiebe/udb-plugin-nhl@v1.2.0 github.com/benwiebe/udb-plugin-weather"
 PLUGINS ?=
 
-.PHONY: all build test clean deps tidy setup-lib fmt vet
+# ── Cross-compilation targets ─────────────────────────────────────────────────
+# Requires Zig: brew install zig
+#
+# Pi 3 / Pi 4 / Pi 5 / Pi Zero 2 W  →  make build-pi   (arm64, 64-bit OS)
+# Pi Zero / Pi Zero W                →  make build-pi-zero  (armv6, 32-bit OS)
+#
+# PLUGINS= works the same as for the native build target.
+
+ZIG_TARGET_ARM64 := aarch64-linux-gnu
+ZIG_TARGET_ARMV6 := armv6-linux-gnueabihf
+
+LIB_DIR_ARM64 := $(REPO_ROOT)/build/libs/rpi-rgb-led-matrix-$(ZIG_TARGET_ARM64)
+LIB_DIR_ARMV6 := $(REPO_ROOT)/build/libs/rpi-rgb-led-matrix-$(ZIG_TARGET_ARMV6)
+
+.PHONY: all build build-pi build-pi-arm64 build-pi-zero \
+        test clean deps tidy setup-lib \
+        setup-cross-lib-arm64 setup-cross-lib-armv6 \
+        fmt vet
 
 all: tidy deps build
+
+# ── Native build ──────────────────────────────────────────────────────────────
 
 build: setup-lib
 ifneq ($(PLUGINS),)
@@ -41,6 +60,42 @@ else
 	@echo "Skipping LED matrix library setup (not Linux)"
 endif
 
+# ── Cross-compile for Raspberry Pi ───────────────────────────────────────────
+
+# Pi 3, Pi 4, Pi 5, Pi Zero 2 W — 64-bit arm64 OS (most common modern target)
+build-pi: build-pi-arm64
+
+build-pi-arm64: setup-cross-lib-arm64
+ifneq ($(PLUGINS),)
+	./scripts/build-with-plugins.sh $(PLUGINS)
+endif
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=1 \
+	CC="zig cc -target $(ZIG_TARGET_ARM64)" \
+	CXX="zig c++ -target $(ZIG_TARGET_ARM64)" \
+	CGO_CFLAGS="-I$(LIB_DIR_ARM64)/include" \
+	CGO_LDFLAGS="-L$(LIB_DIR_ARM64)/lib -lrgbmatrix -lstdc++ -lm" \
+	go build -v -o $(OUTPUT)-linux-arm64 .
+
+# Pi Zero / Pi Zero W — 32-bit ARMv6 OS
+build-pi-zero: setup-cross-lib-armv6
+ifneq ($(PLUGINS),)
+	./scripts/build-with-plugins.sh $(PLUGINS)
+endif
+	GOOS=linux GOARCH=arm GOARM=6 CGO_ENABLED=1 \
+	CC="zig cc -target $(ZIG_TARGET_ARMV6)" \
+	CXX="zig c++ -target $(ZIG_TARGET_ARMV6)" \
+	CGO_CFLAGS="-I$(LIB_DIR_ARMV6)/include" \
+	CGO_LDFLAGS="-L$(LIB_DIR_ARMV6)/lib -lrgbmatrix -lstdc++ -lm" \
+	go build -v -o $(OUTPUT)-linux-armv6 .
+
+setup-cross-lib-arm64:
+	./scripts/setup-cross-compile-lib.sh $(ZIG_TARGET_ARM64)
+
+setup-cross-lib-armv6:
+	./scripts/setup-cross-compile-lib.sh $(ZIG_TARGET_ARMV6)
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+
 deps:
 	go mod download
 	go mod verify
@@ -55,5 +110,5 @@ vet:
 	go vet ./...
 
 clean:
-	rm -f $(OUTPUT)
+	rm -f $(OUTPUT) $(OUTPUT)-linux-arm64 $(OUTPUT)-linux-armv6
 	rm -rf ./build/
