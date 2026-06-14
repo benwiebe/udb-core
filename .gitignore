@@ -41,4 +41,6 @@ go.work.sum
 # Project-specific files
 /config.json
 /udb
+/udb-linux-arm64
+/udb-linux-armv6
 /plugins/

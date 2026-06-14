@@ -5,7 +5,7 @@ go 1.25.1
 require github.com/tfk1410/go-rpi-rgb-led-matrix v0.0.0-20210404121211-ed43f29cbccb
 
 require (
-	github.com/benwiebe/udb-plugin-library v0.2.0
+	github.com/benwiebe/udb-plugin-library v0.3.0
 	golang.org/x/image v0.39.0
 )
 
